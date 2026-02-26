@@ -1,274 +1,228 @@
 <!DOCTYPE html>
 <html lang="ml">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect - Secured Communication</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <style>
-        :root { --primary: #075e54; --accent: #25d366; --bg: #ece5dd; --error: #ff3b30; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #auth-screen, #main-screen, #admin-screen { display: none; height: 100%; flex-direction: column; }
-        .header { background: var(--primary); color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .user-profile { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; }
-        .dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; color: #333; min-width: 200px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; overflow: hidden; }
-        .dropdown button { width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
-        .card { background: white; padding: 32px; border-radius: 16px; margin: auto; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; position: relative; }
-        input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; background: var(--accent); color: white; margin-top: 5px; }
-        .contact-item { background: white; padding: 16px; border-radius: 12px; margin: 10px; display: flex; align-items: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); justify-content: space-between; }
-        .avatar { width: 45px; height: 45px; background: var(--primary); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; }
-        
-        #loader-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); border-radius: 16px; z-index: 10; flex-direction: column; align-items: center; justify-content: center; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect - Secured Communication</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <style>
+        :root { --primary: #075e54; --accent: #25d366; --bg: #ece5dd; --error: #ff3b30; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #auth-screen, #main-screen { display: none; height: 100%; flex-direction: column; }
+        .header { background: var(--primary); color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .user-profile { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; }
+        .dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; color: #333; min-width: 200px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; overflow: hidden; }
+        .dropdown button { width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .card { background: white; padding: 32px; border-radius: 16px; margin: auto; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; position: relative; }
+        input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; background: var(--accent); color: white; }
+        .contact-item { background: white; padding: 16px; border-radius: 12px; margin: 10px; display: flex; align-items: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .avatar { width: 45px; height: 45px; background: var(--primary); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; }
+        
+        /* Loading Animation Styles */
+        #loader-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); border-radius: 16px; z-index: 10; flex-direction: column; align-items: center; justify-content: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loader-text { margin-top: 10px; font-size: 14px; color: var(--primary); font-weight: bold; }
 
-        #call-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; flex-direction: column; }
-        #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { width: 110px; height: 160px; position: absolute; top: 20px; right: 20px; border-radius: 12px; border: 2px solid #fff; object-fit: cover; }
-        .call-controls { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; }
-    </style>
+        #call-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; flex-direction: column; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; }
+        #local-video { width: 110px; height: 160px; position: absolute; top: 20px; right: 20px; border-radius: 12px; border: 2px solid #fff; object-fit: cover; }
+    </style>
 </head>
 <body>
-    <audio id="ringtone" loop src="https://www.soundjay.com/phone/phone-calling-1.mp3"></audio>
+    <audio id="ringtone" loop src="https://www.soundjay.com/phone/phone-calling-1.mp3"></audio>
 
-    <div id="auth-screen" style="display: flex;">
-        <div class="card" id="login-box">
-            <h2 style="color: var(--primary)">Login</h2>
-            <input type="tel" id="login-id" placeholder="Mobile ID">
-            <input type="password" id="login-pass" placeholder="Password">
-            <button class="btn" id="login-btn" onclick="handleLogin()">Login</button>
-            <p onclick="toggleAuth(false)" style="color: var(--primary); cursor: pointer; margin-top: 15px; font-size: 14px;">പുതിയ അക്കൗണ്ട്? Register</p>
-        </div>
+    <div id="auth-screen" style="display: flex;">
+        <div class="card" id="login-box">
+            <h2 style="color: var(--primary)">Login</h2>
+            <input type="tel" id="login-id" placeholder="Mobile ID" inputmode="numeric">
+            <input type="password" id="login-pass" placeholder="Password">
+            <button class="btn" id="login-btn" onclick="handleLogin()">Login</button>
+            <p onclick="toggleAuth(false)" style="color: var(--primary); cursor: pointer; margin-top: 15px; font-size: 14px;">പുതിയ അക്കൗണ്ട്? Register</p>
+        </div>
 
-        <div class="card" id="reg-box" style="display: none;">
-            <div id="loader-overlay">
-                <div class="spinner"></div>
-                <div class="loader-text" id="status-msg">അപേക്ഷ അയക്കുന്നു...</div>
-            </div>
-            <h2 style="color: var(--primary)">Register</h2>
-            <input type="text" id="reg-name" placeholder="Full Name">
-            <input type="tel" id="reg-id" placeholder="Mobile ID">
-            <input type="email" id="reg-mail" placeholder="Mail ID">
-            <input type="password" id="reg-pass" placeholder="Password">
-            <button class="btn" onclick="requestAccess()">Submit for Approval</button>
-            <p onclick="toggleAuth(true)" style="color: var(--primary); cursor: pointer; margin-top: 15px; font-size: 14px;">Login</p>
-        </div>
-    </div>
+        <div class="card" id="reg-box" style="display: none;">
+            <div id="loader-overlay">
+                <div class="spinner"></div>
+                <div class="loader-text" id="status-msg">അപേക്ഷ അയക്കുന്നു...</div>
+            </div>
+            <h2 style="color: var(--primary)">Register</h2>
+            <input type="text" id="reg-name" placeholder="Full Name">
+            <input type="tel" id="reg-id" placeholder="Mobile ID" inputmode="numeric">
+            <input type="email" id="reg-mail" placeholder="Mail ID">
+            <input type="password" id="reg-pass" placeholder="Password">
+            <button class="btn" onclick="requestAccess()">Submit for Approval</button>
+            <p onclick="toggleAuth(true)" style="color: var(--primary); cursor: pointer; margin-top: 15px; font-size: 14px;">Login</p>
+        </div>
+    </div>
 
-    <div id="main-screen">
-        <div class="header">
-            <div style="font-size: 20px; font-weight: bold;">Connect</div>
-            <div class="user-profile" onclick="toggleDropdown()">
-                <span id="display-name">User</span>
-                <div class="dropdown" id="profile-menu">
-                    <button onclick="updateProfile('name')">Update Name</button>
-                    <button onclick="updateProfile('pass')">Change Password</button>
-                    <button id="admin-opt" style="display:none;" onclick="showAdminPanel()">Manage Users</button>
-                    <button onclick="logout()" style="color: var(--error);">Sign Out</button>
-                </div>
-            </div>
-        </div>
-        <div id="contact-list" style="overflow-y: auto; flex: 1;"></div>
-    </div>
+    <div id="main-screen">
+        <div class="header">
+            <div style="font-size: 20px; font-weight: bold;">Connect</div>
+            <div class="user-profile" onclick="toggleDropdown()">
+                <span id="display-name">User</span>
+                <div class="dropdown" id="profile-menu">
+                    <button onclick="edit('name')">Update Name</button>
+                    <button onclick="edit('pass')">Change Password</button>
+                    <button onclick="logout()" style="color: var(--error);">Sign Out</button>
+                </div>
+            </div>
+        </div>
+        <div id="contact-list" style="overflow-y: auto; flex: 1;"></div>
+    </div>
 
-    <div id="admin-screen">
-        <div class="header"><div onclick="hideAdminPanel()" style="cursor:pointer;">⬅ Back</div><div>Admin Panel</div><div></div></div>
-        <div id="all-users-list" style="overflow-y: auto; flex: 1;"></div>
-    </div>
+    <div id="call-overlay">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay muted playsinline></video>
+        <button onclick="endCall()" style="position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); background: var(--error); border: none; width: 60px; height: 60px; border-radius: 50%; color: white; font-weight: bold;">End</button>
+    </div>
 
-    <div id="call-overlay">
-        <video id="remote-video" autoplay playsinline></video>
-        <video id="local-video" autoplay muted playsinline></video>
-        <div class="call-controls"><button onclick="endCall()" style="background:var(--error); border:none; width:65px; height:65px; border-radius:50%; color:white; font-weight:bold; cursor:pointer;">End</button></div>
-    </div>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIowb628afMgDxbAqyoHVpXRfSC_mTL2g",
+            databaseURL: "https://fefei-8f083-default-rtdb.firebaseio.com",
+            projectId: "fefei-8f083"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAIowb628afMgDxbAqyoHVpXRfSC_mTL2g",
-            databaseURL: "https://fefei-8f083-default-rtdb.firebaseio.com",
-            projectId: "fefei-8f083"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const ADMIN_ID = "9539677432";
-        emailjs.init("9ynLrm-41NbPpvJPG");
+        emailjs.init("9ynLrm-41NbPpvJPG");
 
-        let peer, localStream, currentCall, myId;
+        let peer, localStream, currentCall, myId;
 
-        async function hashPass(password) {
-            const msgBuffer = new TextEncoder().encode(password);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
+        function toggleAuth(isLogin) {
+            document.getElementById('login-box').style.display = isLogin ? 'block' : 'none';
+            document.getElementById('reg-box').style.display = isLogin ? 'none' : 'block';
+        }
 
-        function toggleAuth(isLogin) {
-            document.getElementById('login-box').style.display = isLogin ? 'block' : 'none';
-            document.getElementById('reg-box').style.display = isLogin ? 'none' : 'block';
-        }
+        function showLoader(msg) {
+            const loader = document.getElementById('loader-overlay');
+            document.getElementById('status-msg').innerText = msg;
+            loader.style.display = 'flex';
+        }
 
-        function showLoader(msg) {
-            const loader = document.getElementById('loader-overlay');
-            document.getElementById('status-msg').innerText = msg;
-            loader.style.display = 'flex';
-        }
+        function requestAccess() {
+            const name = document.getElementById('reg-name').value;
+            const id = document.getElementById('reg-id').value;
+            const mail = document.getElementById('reg-mail').value;
+            const pass = document.getElementById('reg-pass').value;
 
-        async function requestAccess() {
-            const name = document.getElementById('reg-name').value;
-            const id = document.getElementById('reg-id').value;
-            const mail = document.getElementById('reg-mail').value;
-            const passRaw = document.getElementById('reg-pass').value;
-            if(!name || !id || !mail || !passRaw) return;
-            const pass = await hashPass(passRaw);
-            showLoader("അപേക്ഷ അയക്കുന്നു...");
-            emailjs.send("service_8exfr9s", "template_8yx5s1k", { from_name: name, user_id: id, user_email: mail })
-            .then(() => {
-                db.ref('pending_users/' + id).set({ name, id, mail, pass });
-                showLoader("അപേക്ഷ അയച്ചു! അഡ്മിൻ മെയിൽ അപ്രൂവലിനായി കാത്തിരിക്കുക.");
-                setTimeout(() => location.reload(), 3000);
-            });
-        }
+            if(!name || !id || !mail || !pass) return;
 
-        async function handleLogin() {
-            const id = document.getElementById('login-id').value;
-            const pass = await hashPass(document.getElementById('login-pass').value);
-            db.ref('users/' + id).once('value', snap => {
-                if (snap.exists() && snap.val().pass === pass) {
-                    localStorage.setItem('session', JSON.stringify(snap.val()));
-                    startApp(snap.val());
-                } else {
-                    alert("ലോഗിൻ പരാജയപ്പെട്ടു. വിവരങ്ങൾ പരിശോധിക്കുക.");
-                }
-            });
-        }
+            showLoader("അപേക്ഷ അയക്കുന്നു...");
 
-        function startApp(user) {
-            myId = user.id;
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('main-screen').style.display = 'flex';
-            document.getElementById('display-name').innerText = user.name;
-            if(myId === ADMIN_ID) document.getElementById('admin-opt').style.display = 'block';
+            emailjs.send("service_8exfr9s", "template_8yx5s1k", {
+                from_name: name,
+                user_id: id,
+                user_email: mail
+            }).then(() => {
+                db.ref('pending_users/' + id).set({ name, id, mail, pass });
+                showLoader("അപേക്ഷ അയച്ചു! അഡ്മിൻ അപ്രൂവലിനായി കാത്തിരിക്കുക.");
+                setTimeout(() => location.reload(), 3000);
+            });
+        }
 
-            peer = new Peer(myId);
-            db.ref('users/' + myId).update({ online: true });
+        function handleLogin() {
+            const id = document.getElementById('login-id').value;
+            const pass = document.getElementById('login-pass').value;
+            db.ref('users/' + id).once('value', snap => {
+                if (snap.exists() && snap.val().pass === pass) {
+                    localStorage.setItem('session', JSON.stringify(snap.val()));
+                    startApp(snap.val());
+                } else {
+                    document.getElementById('login-btn').innerText = "അനുമതിയില്ല / തെറ്റായ വിവരങ്ങൾ";
+                    setTimeout(() => document.getElementById('login-btn').innerText = "Login", 2000);
+                }
+            });
+        }
 
-            db.ref('users').on('value', snap => {
-                const list = document.getElementById('contact-list');
-                list.innerHTML = '';
-                snap.forEach(c => {
-                    const u = c.val();
-                    if (u.id !== myId) {
-                        const div = document.createElement('div');
-                        div.className = 'contact-item';
-                        div.innerHTML = `<div style="display:flex; align-items:center;"><div class="avatar">${u.name[0]}</div>
-                                         <div><b>${u.name} :: ${u.id}</b></div></div>
-                                         <div><button onclick="initCall('${u.id}', true)" style="border:none; background:none; font-size:20px;">📞</button>
-                                         <button onclick="initCall('${u.id}', false)" style="border:none; background:none; font-size:20px; margin-left:10px;">📹</button></div>`;
-                        list.appendChild(div);
-                    }
-                });
-            });
+        function startApp(user) {
+            myId = user.id;
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-screen').style.display = 'flex';
+            document.getElementById('display-name').innerText = user.name;
+            peer = new Peer(myId);
+            peer.on('open', () => {
+                db.ref('users/' + myId).update({ online: true });
+                db.ref('users').on('value', snap => {
+                    const list = document.getElementById('contact-list'); list.innerHTML = '';
+                    snap.forEach(c => {
+                        if (c.key !== myId) {
+                            const u = c.val();
+                            const div = document.createElement('div'); div.className = 'contact-item';
+                            div.onclick = () => initiateCall(u.id);
+                            div.innerHTML = `<div class="avatar">${u.name.charAt(0)}</div><b>${u.name} (${u.id})</b>`;
+                            list.appendChild(div);
+                        }
+                    });
+                });
+            });
+            peer.on('call', call => { currentCall = call; document.getElementById('ringtone').play(); if(confirm("Call coming. Answer?")) answerCall(); else endCall(); });
+        }
 
-            peer.on('call', call => {
-                document.getElementById('ringtone').play();
-                if(confirm("കോൾ വരുന്നു. എടുക്കണോ?")) answerCall(call);
-                else { call.close(); document.getElementById('ringtone').pause(); }
-            });
-        }
+        function checkAdminAction() {
+            const params = new URLSearchParams(window.location.search);
+            const action = params.get('action');
+            const targetId = params.get('id');
+            
+            if (action === 'approve' && targetId) {
+                // അഡ്മിൻ ലിങ്ക് ക്ലിക്ക് ചെയ്യുമ്പോൾ കാർഡ് കാണാതിരിക്കാൻ ഓട്ടോമാറ്റിക് ലോഗിൻ ടോഗിൾ ചെയ്യാം
+                toggleAuth(false);
+                showLoader("യൂസറെ ആഡ് ചെയ്യുന്നു...");
 
-        // മെയിൽ വഴിയുള്ള അപ്രൂവൽ ലിങ്ക് പ്രോസസ്സ് ചെയ്യാൻ
-        function checkAdminAction() {
-            const params = new URLSearchParams(window.location.search);
-            const action = params.get('action'), targetId = params.get('id');
-            if (!action || !targetId) return;
-            toggleAuth(false);
-            if (action === 'approve') {
-                showLoader("യൂസറെ ആഡ് ചെയ്യുന്നു...");
-                db.ref('pending_users/' + targetId).once('value', snap => {
-                    if (snap.exists()) {
-                        const data = snap.val();
-                        db.ref('users/' + targetId).set(data).then(() => {
-                            db.ref('pending_users/' + targetId).remove();
-                            emailjs.send("service_8exfr9s", "template_vvf9da9", { to_name: data.name, to_email: data.mail, user_id: data.id });
-                            showLoader("യൂസറെ വിജയകരമായി ആഡ് ചെയ്തു!");
-                            setTimeout(() => window.location.href = window.location.pathname, 2500);
-                        });
-                    }
-                });
-            } else if (action === 'reject') {
-                showLoader("അപേക്ഷ നിരസിക്കുന്നു...");
-                db.ref('pending_users/' + targetId).remove().then(() => {
-                    showLoader("അപേക്ഷ നിരസിച്ചു.");
-                    setTimeout(() => window.location.href = window.location.pathname, 2000);
-                });
-            }
-        }
+                db.ref('pending_users/' + targetId).once('value', snap => {
+                    if (snap.exists()) {
+                        const data = snap.val();
+                        db.ref('users/' + targetId).set(data).then(() => {
+                            db.ref('pending_users/' + targetId).remove();
+                            emailjs.send("service_8exfr9s", "template_vvf9da9", {
+                                to_name: data.name,
+                                to_email: data.mail,
+                                user_id: data.id
+                            });
+                            showLoader("യൂസറെ വിജയകരമായി ആഡ് ചെയ്തു!");
+                            setTimeout(() => window.location.href = window.location.pathname, 2500);
+                        });
+                    } else {
+                        showLoader("യൂസറെ കണ്ടെത്താനായില്ല.");
+                        setTimeout(() => window.location.href = window.location.pathname, 2000);
+                    }
+                });
+            } else if (action === 'reject' && targetId) {
+                toggleAuth(false);
+                showLoader("അപേക്ഷ നീക്കം ചെയ്യുന്നു...");
+                db.ref('pending_users/' + targetId).remove().then(() => {
+                    showLoader("അപേക്ഷ നിരസിച്ചു.");
+                    setTimeout(() => window.location.href = window.location.pathname, 2000);
+                });
+            }
+        }
 
-        async function initCall(target, audioOnly) {
-            localStream = await navigator.mediaDevices.getUserMedia({video: !audioOnly, audio: true});
-            document.getElementById('local-video').srcObject = localStream;
-            document.getElementById('call-overlay').style.display = 'flex';
-            currentCall = peer.call(target, localStream);
-            currentCall.on('stream', s => document.getElementById('remote-video').srcObject = s);
-        }
+        async function initiateCall(target) {
+            localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+            document.getElementById('local-video').srcObject = localStream;
+            document.getElementById('call-overlay').style.display = 'flex';
+            currentCall = peer.call(target, localStream);
+            currentCall.on('stream', s => document.getElementById('remote-video').srcObject = s);
+        }
 
-        async function answerCall(call) {
-            currentCall = call;
-            document.getElementById('ringtone').pause();
-            localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-            document.getElementById('local-video').srcObject = localStream;
-            document.getElementById('call-overlay').style.display = 'flex';
-            currentCall.answer(localStream);
-            currentCall.on('stream', s => document.getElementById('remote-video').srcObject = s);
-        }
+        async function answerCall() {
+            document.getElementById('ringtone').pause();
+            localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+            document.getElementById('local-video').srcObject = localStream;
+            document.getElementById('call-overlay').style.display = 'flex';
+            currentCall.answer(localStream);
+            currentCall.on('stream', s => document.getElementById('remote-video').srcObject = s);
+        }
 
-        function endCall() {
-            if(currentCall) currentCall.close();
-            if(localStream) localStream.getTracks().forEach(t => t.stop());
-            document.getElementById('call-overlay').style.display = 'none';
-            document.getElementById('ringtone').pause();
-        }
-
-        function showAdminPanel() {
-            document.getElementById('main-screen').style.display = 'none';
-            document.getElementById('admin-screen').style.display = 'flex';
-            db.ref('users').on('value', snap => {
-                const list = document.getElementById('all-users-list');
-                list.innerHTML = '';
-                snap.forEach(c => {
-                    const u = c.val();
-                    const div = document.createElement('div');
-                    div.className = 'contact-item';
-                    div.innerHTML = `<span>${u.name} (${u.id})</span>
-                                     <button onclick="removeUser('${u.id}')" style="background:var(--error); color:white; border:none; padding:5px 10px; border-radius:5px;">Remove</button>`;
-                    list.appendChild(div);
-                });
-            });
-        }
-
-        function removeUser(id) { if(confirm("ഈ യൂസറെ ഒഴിവാക്കണോ?")) db.ref('users/' + id).remove(); }
-        function hideAdminPanel() { document.getElementById('admin-screen').style.display = 'none'; document.getElementById('main-screen').style.display = 'flex'; }
-        function toggleDropdown() { const m = document.getElementById('profile-menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
-        function logout() { localStorage.clear(); location.reload(); }
-
-        async function updateProfile(type) {
-            const val = prompt(type === 'name' ? "പുതിയ പേര് നൽകുക:" : "പുതിയ പാസ്‌വേഡ് നൽകുക:");
-            if(!val) return;
-            const updateData = {};
-            if(type === 'name') { updateData.name = val; document.getElementById('display-name').innerText = val; }
-            else { updateData.pass = await hashPass(val); }
-            db.ref('users/' + myId).update(updateData);
-            alert("Updated!");
-        }
-
-        window.onload = () => { 
-            checkAdminAction();
-            const s = localStorage.getItem('session'); 
-            if (s) startApp(JSON.parse(s)); 
-        };
-    </script>
+        function endCall() { document.getElementById('ringtone').pause(); if(currentCall) currentCall.close(); if(localStream) localStream.getTracks().forEach(t => t.stop()); document.getElementById('call-overlay').style.display = 'none'; }
+        function toggleDropdown() { const m = document.getElementById('profile-menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
+        function logout() { localStorage.clear(); location.reload(); }
+        window.onload = () => { checkAdminAction(); const s = localStorage.getItem('session'); if (s) startApp(JSON.parse(s)); };
+    </script>
 </body>
 </html>
