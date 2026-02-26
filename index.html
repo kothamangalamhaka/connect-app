@@ -3,40 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect Ultra - Secured Communication</title>
+    <title>Connect - Secured Communication</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
-        :root { --primary: #075e54; --accent: #25d366; --bg: #ece5dd; --error: #ff3b30; --white: #ffffff; }
+        :root { --primary: #075e54; --accent: #25d366; --bg: #ece5dd; --error: #ff3b30; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        #auth-screen, #main-screen, #admin-screen { display: none; height: 100%; flex-direction: column; }
+        .header { background: var(--primary); color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .user-profile { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; }
+        .dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; color: #333; min-width: 200px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; overflow: hidden; }
+        .dropdown button { width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .card { background: white; padding: 32px; border-radius: 16px; margin: auto; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; position: relative; }
+        input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; background: var(--accent); color: white; margin-top: 5px; }
+        .contact-item { background: white; padding: 16px; border-radius: 12px; margin: 10px; display: flex; align-items: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); justify-content: space-between; }
+        .avatar { width: 45px; height: 45px; background: var(--primary); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; }
         
-        /* Layouts */
-        #auth-screen, #main-screen, #chat-screen, #call-overlay { display: none; height: 100%; flex-direction: column; }
-        .header { background: var(--primary); color: var(--white); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
-        
-        /* Cards & UI */
-        .card { background: var(--white); padding: 25px; border-radius: 15px; margin: auto; width: 85%; max-width: 400px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); text-align: center; }
-        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-success { background: var(--accent); color: var(--white); }
-        
-        /* Chat & Call */
-        .msg-area { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #e5ddd5; }
-        .msg { padding: 8px 12px; border-radius: 10px; max-width: 70%; font-size: 14px; position: relative; }
-        .sent { background: #dcf8c6; align-self: flex-end; }
-        .received { background: white; align-self: flex-start; }
-        
-        #video-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 5px; background: #000; padding: 5px; }
-        video { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; background: #222; }
-        
-        .loader { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 200; align-items: center; justify-content: center; flex-direction: column; }
+        #loader-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); border-radius: 16px; z-index: 10; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Admin Controls */
-        .admin-item { background: white; margin: 5px 15px; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        #call-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; flex-direction: column; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; }
+        #local-video { width: 110px; height: 160px; position: absolute; top: 20px; right: 20px; border-radius: 12px; border: 2px solid #fff; object-fit: cover; }
+        .call-controls { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; }
     </style>
 </head>
 <body>
@@ -44,65 +37,58 @@
 
     <div id="auth-screen" style="display: flex;">
         <div class="card" id="login-box">
-            <h2 style="color: var(--primary)">Connect Ultra</h2>
-            <div style="display: flex; gap: 5px;">
-                <select id="login-country" style="width: 40%;"></select>
-                <input type="tel" id="login-id" placeholder="Mobile ID" style="flex:1;">
-            </div>
+            <h2 style="color: var(--primary)">Login</h2>
+            <input type="tel" id="login-id" placeholder="Mobile ID">
             <input type="password" id="login-pass" placeholder="Password">
-            <button class="btn btn-success" onclick="handleLogin()">Login</button>
-            <p onclick="toggleAuth(false)" style="color: var(--primary); cursor: pointer; font-size: 14px;">Register New Account</p>
+            <button class="btn" id="login-btn" onclick="handleLogin()">Login</button>
+            <p onclick="toggleAuth(false)" style="color: var(--primary); cursor: pointer; margin-top: 15px; font-size: 14px;">പുതിയ അക്കൗണ്ട്? Register</p>
         </div>
+
         <div class="card" id="reg-box" style="display: none;">
-            <div class="loader" id="reg-loader"><div class="spinner"></div><p>Submitting...</p></div>
+            <div id="loader-overlay">
+                <div class="spinner"></div>
+                <div class="loader-text" id="status-msg">അപേക്ഷ അയക്കുന്നു...</div>
+            </div>
             <h2 style="color: var(--primary)">Register</h2>
             <input type="text" id="reg-name" placeholder="Full Name">
-            <div style="display: flex; gap: 5px;">
-                <select id="reg-country" style="width: 40%;"></select>
-                <input type="tel" id="reg-id" placeholder="Mobile ID" style="flex:1;">
-            </div>
+            <input type="tel" id="reg-id" placeholder="Mobile ID">
             <input type="email" id="reg-mail" placeholder="Mail ID">
             <input type="password" id="reg-pass" placeholder="Password">
-            <button class="btn btn-success" onclick="requestAccess()">Submit for Approval</button>
-            <p onclick="toggleAuth(true)" style="color: var(--primary); cursor: pointer; font-size: 14px;">Back to Login</p>
+            <button class="btn" onclick="requestAccess()">Submit for Approval</button>
+            <p onclick="toggleAuth(true)" style="color: var(--primary); cursor: pointer; margin-top: 15px; font-size: 14px;">Login</p>
         </div>
     </div>
 
     <div id="main-screen">
         <div class="header">
-            <div>Connect</div>
-            <div style="position: relative; cursor: pointer;" onclick="toggleDrop()">
-                <span id="u-name">User</span>
-                <div class="dropdown" id="drop-menu" style="display:none; position:absolute; right:0; top:35px; background:white; color:black; width:180px; box-shadow:0 5px 15px rgba(0,0,0,0.2); border-radius:8px; overflow:hidden;">
-                    <button style="width:100%; text-align:left; padding:12px; border:none; background:none;" onclick="showProfile()">Profile Settings</button>
-                    <div id="admin-only" style="display:none;">
-                        <button style="width:100%; text-align:left; padding:12px; border:none; background:none; color:var(--error);" onclick="manageUsers()">Remove Existing User</button>
-                    </div>
-                    <button style="width:100%; text-align:left; padding:12px; border:none; background:none;" onclick="logout()">Sign Out</button>
+            <div id="nav-title" style="font-size: 20px; font-weight: bold;">Connect</div>
+            <div class="user-profile" onclick="toggleDropdown()">
+                <span id="display-name">User</span>
+                <div class="dropdown" id="profile-menu">
+                    <button onclick="updateProfile('name')">Update Name</button>
+                    <button onclick="updateProfile('pass')">Change Password</button>
+                    <button id="admin-opt" style="display:none;" onclick="showAdminPanel()">Manage Users</button>
+                    <button onclick="logout()" style="color: var(--error);">Sign Out</button>
                 </div>
             </div>
         </div>
-        <div id="contact-list" style="overflow-y:auto; flex:1;"></div>
+        <div id="contact-list" style="overflow-y: auto; flex: 1;"></div>
     </div>
 
-    <div id="chat-screen">
+    <div id="admin-screen">
         <div class="header">
-            <button onclick="backToMain()" style="background:none; border:none; color:white; font-size:20px;">←</button>
-            <div id="chat-with" style="flex:1; margin-left:10px;">User</div>
-            <button onclick="makeCall('voice')" style="background:none; border:none; color:white; margin-right:15px;">📞</button>
-            <button onclick="makeCall('video')" style="background:none; border:none; color:white;">📹</button>
+            <div onclick="hideAdminPanel()" style="cursor:pointer;">⬅ Back</div>
+            <div>Admin Panel</div>
+            <div></div>
         </div>
-        <div class="msg-area" id="msg-area"></div>
-        <div style="padding:10px; display:flex; background:white; gap:5px;">
-            <input type="text" id="msg-input" placeholder="Type message..." style="margin:0;">
-            <button onclick="sendMsg()" style="background:var(--primary); color:white; border:none; padding:10px 15px; border-radius:5px;">Send</button>
-        </div>
+        <div id="all-users-list" style="overflow-y: auto; flex: 1;"></div>
     </div>
 
     <div id="call-overlay">
-        <div id="video-grid"></div>
-        <div style="height:80px; display:flex; justify-content:center; align-items:center; gap:30px; background:#000;">
-            <button onclick="endCall()" style="background:var(--error); width:50px; height:50px; border-radius:50%; border:none; color:white;">End</button>
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay muted playsinline></video>
+        <div class="call-controls">
+            <button onclick="endCall()" style="background: var(--error); border: none; width: 65px; height: 65px; border-radius: 50%; color: white; font-weight: bold; cursor: pointer;">End</button>
         </div>
     </div>
 
@@ -114,33 +100,16 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const ADMIN_ID = "9539677432";
         emailjs.init("9ynLrm-41NbPpvJPG");
 
-        let peer, localStream, currentCall, myId, myData, chatTarget;
-        const hash = (p) => btoa(p);
-        const ADMIN_ID = "+919539677432";
+        let peer, localStream, currentCall, myId, myName;
 
-        const countries = [
-            {n: "India", c: "+91"}, {n: "Saudi Arabia", c: "+966"}, {n: "UAE", c: "+971"}, 
-            {n: "USA", c: "+1"}, {n: "UK", c: "+44"}, {n: "Oman", c: "+968"}
-            // മറ്റ് രാജ്യങ്ങൾ തനിയെ ആഡ് ആകും
-        ];
-
-        window.onload = () => {
-            loadCountries();
-            checkAdmin();
-            const saved = localStorage.getItem('session');
-            if (saved) startApp(JSON.parse(saved));
-        };
-
-        function loadCountries() {
-            const selects = [document.getElementById('login-country'), document.getElementById('reg-country')];
-            selects.forEach(s => {
-                countries.forEach(cnt => {
-                    let opt = new Array(`<option value="${cnt.c}">${cnt.n} (${cnt.c})</option>`);
-                    s.innerHTML += opt;
-                });
-            });
+        // Password Hashing Function
+        async function hashPass(password) {
+            const msgBuffer = new TextEncoder().encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
         function toggleAuth(isLogin) {
@@ -148,153 +117,130 @@
             document.getElementById('reg-box').style.display = isLogin ? 'none' : 'block';
         }
 
-        function requestAccess() {
-            const n = document.getElementById('reg-name').value;
-            const id = document.getElementById('reg-country').value + document.getElementById('reg-id').value;
-            const m = document.getElementById('reg-mail').value;
-            const p = hash(document.getElementById('reg-pass').value);
-
-            if(!n || !id || !m || !p) return alert("Fields required");
-
-            db.ref('users/' + id).once('value', snap => {
-                if (snap.exists()) return alert("Mobile ID already registered!");
-                
-                document.getElementById('reg-loader').style.display = 'flex';
-                emailjs.send("service_8exfr9s", "template_8yx5s1k", { from_name: n, user_id: id, user_email: m }).then(() => {
-                    db.ref('pending_users/' + id).set({ name: n, id: id, mail: m, pass: p });
-                    alert("Request sent to Admin!");
-                    location.reload();
-                });
+        async function requestAccess() {
+            const name = document.getElementById('reg-name').value;
+            const id = document.getElementById('reg-id').value;
+            const mail = document.getElementById('reg-mail').value;
+            const pass = await hashPass(document.getElementById('reg-pass').value);
+            if(!name || !id || !mail || !pass) return;
+            document.getElementById('loader-overlay').style.display = 'flex';
+            emailjs.send("service_8exfr9s", "template_8yx5s1k", { from_name: name, user_id: id, user_email: mail })
+            .then(() => {
+                db.ref('pending_users/' + id).set({ name, id, mail, pass });
+                document.getElementById('status-msg').innerText = "അപേക്ഷ അയച്ചു! കാത്തിരിക്കുക.";
+                setTimeout(() => location.reload(), 2500);
             });
         }
 
-        function handleLogin() {
-            const id = document.getElementById('login-country').value + document.getElementById('login-id').value;
-            const p = hash(document.getElementById('login-pass').value);
-
+        async function handleLogin() {
+            const id = document.getElementById('login-id').value;
+            const pass = await hashPass(document.getElementById('login-pass').value);
             db.ref('users/' + id).once('value', snap => {
-                if (snap.exists() && snap.val().pass === p) {
+                if (snap.exists() && snap.val().pass === pass) {
                     localStorage.setItem('session', JSON.stringify(snap.val()));
                     startApp(snap.val());
-                } else alert("Invalid ID/Password or Approval Pending");
-            });
-        }
-
-        function startApp(user) {
-            myId = user.id; myData = user;
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('main-screen').style.display = 'flex';
-            document.getElementById('u-name').innerText = user.name;
-            if(myId === ADMIN_ID) document.getElementById('admin-only').style.display = 'block';
-
-            peer = new Peer(myId.replace('+', ''));
-            peer.on('open', () => {
-                db.ref('users/' + myId).update({ online: true });
-                loadUsers();
-            });
-
-            peer.on('call', call => {
-                if(confirm("Incoming call from " + call.peer + ". Accept?")) {
-                    currentCall = call;
-                    acceptCall();
+                } else {
+                    alert("തെറ്റായ വിവരങ്ങൾ അല്ലെങ്കിൽ അനുമതിയില്ല");
                 }
             });
         }
 
-        function loadUsers() {
+        function startApp(user) {
+            myId = user.id; myName = user.name;
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-screen').style.display = 'flex';
+            document.getElementById('display-name').innerText = user.name;
+            if(myId === ADMIN_ID) document.getElementById('admin-opt').style.display = 'block';
+
+            peer = new Peer(myId);
+            db.ref('users/' + myId).update({ online: true });
+
             db.ref('users').on('value', snap => {
-                const list = document.getElementById('contact-list'); list.innerHTML = '';
+                const list = document.getElementById('contact-list');
+                list.innerHTML = '';
                 snap.forEach(c => {
-                    if (c.key !== myId) {
-                        const u = c.val();
+                    const u = c.val();
+                    if (u.id !== myId) {
                         const div = document.createElement('div');
-                        div.style = "padding:15px; background:white; border-bottom:1px solid #eee; cursor:pointer;";
-                        div.innerHTML = `<b>${u.name}</b><br><small>${u.id}</small>`;
-                        div.onclick = () => openChat(u);
+                        div.className = 'contact-item';
+                        div.innerHTML = `<div style="display:flex; align-items:center;"><div class="avatar">${u.name[0]}</div>
+                                         <div><b>${u.name} :: ${u.id}</b></div></div>
+                                         <div><button onclick="initCall('${u.id}', true)" style="border:none; background:none; font-size:20px;">📞</button>
+                                         <button onclick="initCall('${u.id}', false)" style="border:none; background:none; font-size:20px; margin-left:10px;">📹</button></div>`;
                         list.appendChild(div);
                     }
                 });
             });
+
+            peer.on('call', call => {
+                document.getElementById('ringtone').play();
+                if(confirm("ഇൻകമിംഗ് കോൾ! അറ്റൻഡ് ചെയ്യണോ?")) answerCall(call);
+                else { call.close(); document.getElementById('ringtone').pause(); }
+            });
         }
 
-        function openChat(user) {
-            chatTarget = user;
-            document.getElementById('main-screen').style.display = 'none';
-            document.getElementById('chat-screen').style.display = 'flex';
-            document.getElementById('chat-with').innerText = user.name;
-            // ലോഗിക് ഫോർ ചാറ്റ് ലോഡിംഗ്...
-        }
-
-        async function makeCall(type) {
+        async function initCall(target, audioOnly) {
+            localStream = await navigator.mediaDevices.getUserMedia({video: !audioOnly, audio: true});
+            document.getElementById('local-video').srcObject = localStream;
             document.getElementById('call-overlay').style.display = 'flex';
-            localStream = await navigator.mediaDevices.getUserMedia({video: type==='video', audio: true});
-            addVideoStream(document.createElement('video'), localStream, true);
-            const call = peer.call(chatTarget.id.replace('+', ''), localStream);
-            call.on('stream', s => addVideoStream(document.createElement('video'), s));
+            currentCall = peer.call(target, localStream);
+            currentCall.on('stream', s => document.getElementById('remote-video').srcObject = s);
         }
 
-        function addVideoStream(video, stream, muted = false) {
-            video.srcObject = stream;
-            if(muted) video.muted = true;
-            video.addEventListener('loadedmetadata', () => video.play());
-            document.getElementById('video-grid').append(video);
+        async function answerCall(call) {
+            currentCall = call;
+            document.getElementById('ringtone').pause();
+            localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+            document.getElementById('local-video').srcObject = localStream;
+            document.getElementById('call-overlay').style.display = 'flex';
+            currentCall.answer(localStream);
+            currentCall.on('stream', s => document.getElementById('remote-video').srcObject = s);
         }
 
         function endCall() {
-            location.reload();
+            if(currentCall) currentCall.close();
+            if(localStream) localStream.getTracks().forEach(t => t.stop());
+            document.getElementById('call-overlay').style.display = 'none';
+            document.getElementById('ringtone').pause();
         }
 
-        function manageUsers() {
-            const list = document.getElementById('contact-list');
-            list.innerHTML = '<h3 style="padding:15px;">Admin: User Management</h3>';
-            db.ref('users').once('value', snap => {
+        function showAdminPanel() {
+            document.getElementById('main-screen').style.display = 'none';
+            document.getElementById('admin-screen').style.display = 'flex';
+            db.ref('users').on('value', snap => {
+                const list = document.getElementById('all-users-list');
+                list.innerHTML = '';
                 snap.forEach(c => {
                     const u = c.val();
                     const div = document.createElement('div');
-                    div.className = 'admin-item';
-                    div.innerHTML = `<span>${u.name} (${u.id})</span> <button onclick="removeUser('${u.id}')" style="background:red; color:white; border:none; padding:5px 10px; border-radius:5px;">Remove</button>`;
+                    div.className = 'contact-item';
+                    div.innerHTML = `<span>${u.name} (${u.id})</span>
+                                     <button onclick="removeUser('${u.id}')" style="background:var(--error); color:white; border:none; padding:5px 10px; border-radius:5px;">Remove</button>`;
                     list.appendChild(div);
                 });
             });
         }
 
-        function removeUser(uid) {
-            if(confirm("Remove this user permanently?")) {
-                db.ref('users/' + uid).remove();
-                manageUsers();
-            }
-        }
-
-        function checkAdmin() {
-            const p = new URLSearchParams(window.location.search);
-            if(p.get('action') === 'approve' && p.get('id')) {
-                db.ref('pending_users/' + p.get('id')).once('value', snap => {
-                    if(snap.exists()) {
-                        db.ref('users/' + p.get('id')).set(snap.val()).then(() => {
-                            db.ref('pending_users/' + p.get('id')).remove();
-                            alert("User Approved!");
-                        });
-                    }
-                });
-            }
-        }
-
-        function toggleDrop() {
-            const m = document.getElementById('drop-menu');
-            m.style.display = m.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function showProfile() {
-            const n = prompt("Change Name:", myData.name);
-            const p = prompt("New Password (Leave blank to keep same):");
-            let update = {};
-            if(n) update.name = n;
-            if(p) update.pass = hash(p);
-            db.ref('users/' + myId).update(update).then(() => location.reload());
-        }
-
+        function removeUser(id) { if(confirm("ഈ യൂസറെ ഒഴിവാക്കണോ?")) db.ref('users/' + id).remove(); }
+        function hideAdminPanel() { document.getElementById('admin-screen').style.display = 'none'; document.getElementById('main-screen').style.display = 'flex'; }
+        function toggleDropdown() { const m = document.getElementById('profile-menu'); m.style.display = m.style.display === 'block' ? 'none' : 'block'; }
         function logout() { localStorage.clear(); location.reload(); }
-        function backToMain() { location.reload(); }
+
+        async function updateProfile(type) {
+            const val = prompt(type === 'name' ? "പുതിയ പേര് നൽകുക:" : "പുതിയ പാസ്‌വേഡ് നൽകുക:");
+            if(!val) return;
+            const updateData = {};
+            if(type === 'name') { updateData.name = val; document.getElementById('display-name').innerText = val; }
+            else { updateData.pass = await hashPass(val); }
+            db.ref('users/' + myId).update(updateData);
+            alert("Updated!");
+        }
+
+        window.onload = () => { 
+            const s = localStorage.getItem('session'); 
+            if (s) startApp(JSON.parse(s)); 
+            // Admin URL actions handled by requestAccess flow
+        };
     </script>
 </body>
 </html>
