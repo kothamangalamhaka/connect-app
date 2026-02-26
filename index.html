@@ -15,8 +15,13 @@
         
         /* Layouts */
         #auth-screen, #main-screen { display: none; height: 100vh; flex-direction: column; }
-        .header { background: var(--whatsapp-green); color: white; padding: 15px; font-size: 20px; font-weight: bold; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; }
+        .header { background: var(--whatsapp-green); color: white; padding: 15px; font-size: 20px; font-weight: bold; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
         
+        /* Dialer Section */
+        .dialer-container { background: white; padding: 15px; display: flex; gap: 10px; border-bottom: 1px solid #ddd; }
+        .dialer-input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        .dialer-btn { background: var(--light-green); border: none; padding: 10px 15px; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; }
+
         /* Contact List */
         .contact-item { background: white; padding: 15px; border-bottom: 1px solid #ddd; display: flex; align-items: center; cursor: pointer; }
         .contact-item:hover { background: #f5f5f5; }
@@ -59,6 +64,12 @@
             <span>Connect</span>
             <span style="font-size: 14px; opacity: 0.8;" id="my-num"></span>
         </div>
+
+        <div class="dialer-container">
+            <input type="tel" id="dial-number" class="dialer-input" placeholder="നമ്പർ ടൈപ്പ് ചെയ്യുക...">
+            <button class="dialer-btn" onclick="dialCall()">Call</button>
+        </div>
+
         <div style="padding: 10px; font-size: 14px; color: #666;">നിങ്ങളുടെ കോൺടാക്റ്റുകൾ</div>
         <div id="contact-list">
             <p style="text-align: center; margin-top: 20px;">കോൺടാക്റ്റുകൾ തിരയുന്നു...</p>
@@ -70,25 +81,22 @@
             <video id="remote-video" autoplay playsinline></video>
             <video id="local-video" autoplay muted playsinline></video>
         </div>
-        <div class="call-controls" id="call-ui-controls">
-            </div>
+        <div class="call-controls" id="call-ui-controls"></div>
     </div>
 
     <script>
-
         const firebaseConfig = {
-  apiKey: "AIzaSyAIowb628afMgDxbAqyoHVpXRfSC_mTL2g",
-  authDomain: "fefei-8f083.firebaseapp.com",
-  databaseURL: "https://fefei-8f083-default-rtdb.firebaseio.com",
-  projectId: "fefei-8f083",
-  storageBucket: "fefei-8f083.firebasestorage.app",
-  messagingSenderId: "465007199884",
-  appId: "1:465007199884:web:3855e934ea6ec0fddf9da9",
-  measurementId: "G-1FH5G93YR7"
-};
+            apiKey: "AIzaSyAIowb628afMgDxbAqyoHVpXRfSC_mTL2g",
+            authDomain: "fefei-8f083.firebaseapp.com",
+            databaseURL: "https://fefei-8f083-default-rtdb.firebaseio.com",
+            projectId: "fefei-8f083",
+            storageBucket: "fefei-8f083.firebasestorage.app",
+            messagingSenderId: "465007199884",
+            appId: "1:465007199884:web:3855e934ea6ec0fddf9da9",
+            measurementId: "G-1FH5G93YR7"
+        };
         
-        
-    firebase.initializeApp(firebaseConfig);
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         let peer, localStream, currentCall, myPhone;
@@ -127,25 +135,28 @@
                 currentCall = call;
                 showCallUI('incoming', call.peer);
             });
-
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('local-video').srcObject = localStream;
         }
 
-        // --- കോൺടാക്റ്റ് സിൻക് (Contact Sync) ---
-        async function syncContacts() {
-            if ('contacts' in navigator && 'ContactsManager' in window) {
-                try {
-                    const props = ['name', 'tel'];
-                    const contacts = await navigator.contacts.select(props, { multiple: true });
-                    processContacts(contacts);
-                } catch (err) {
-                    console.log("Contact API error, using manual sync");
-                    loadAllRegisteredUsers(); // പെർമിഷൻ ഇല്ലെങ്കിൽ എല്ലാവരെയും കാണിക്കാം (പരീക്ഷണത്തിന്)
-                }
-            } else {
-                loadAllRegisteredUsers();
+        async function startCamera() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('local-video').srcObject = localStream;
+                return true;
+            } catch (err) {
+                alert("ക്യാമറ/മൈക്ക് ആക്സസ് ചെയ്യാൻ കഴിഞ്ഞില്ല");
+                return false;
             }
+        }
+
+        function stopCamera() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+        }
+
+        async function syncContacts() {
+            loadAllRegisteredUsers();
         }
 
         function loadAllRegisteredUsers() {
@@ -176,8 +187,19 @@
             document.getElementById('contact-list').appendChild(div);
         }
 
-        // --- കോളിംഗ് ഫീച്ചറുകൾ ---
-        function startCall(targetPhone) {
+        function dialCall() {
+            const num = document.getElementById('dial-number').value;
+            if (num) {
+                startCall(num);
+            } else {
+                alert("വിളിക്കേണ്ട നമ്പർ നൽകുക");
+            }
+        }
+
+        async function startCall(targetPhone) {
+            const streamReady = await startCamera();
+            if (!streamReady) return;
+
             showCallUI('outgoing', targetPhone);
             const call = peer.call(targetPhone, localStream);
             setupCallEvents(call);
@@ -190,17 +212,26 @@
                 ringtone.play();
                 controls.innerHTML = `
                     <button class="btn-round btn-accept" onclick="answerCall()">Accept</button>
-                    <button class="btn-round btn-end" onclick="endCall()">Reject</button>
+                    <button class="btn-round btn-end" onclick="rejectCall()">Reject</button>
                 `;
             } else {
                 controls.innerHTML = `<button class="btn-round btn-end" onclick="endCall()">End Call</button>`;
             }
         }
 
-        function answerCall() {
+        async function answerCall() {
             ringtone.pause();
+            const streamReady = await startCamera();
+            if (!streamReady) return rejectCall();
+
             currentCall.answer(localStream);
             setupCallEvents(currentCall);
+        }
+
+        function rejectCall() {
+            ringtone.pause();
+            if (currentCall) currentCall.close();
+            document.getElementById('call-overlay').style.display = 'none';
         }
 
         function setupCallEvents(call) {
@@ -209,11 +240,13 @@
                 document.getElementById('remote-video').srcObject = stream;
             });
             call.on('close', endCall);
+            call.on('error', endCall);
         }
 
         function endCall() {
             ringtone.pause();
             if (currentCall) currentCall.close();
+            stopCamera();
             document.getElementById('call-overlay').style.display = 'none';
             document.getElementById('remote-video').srcObject = null;
         }
