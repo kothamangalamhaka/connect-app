@@ -3,284 +3,303 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connect - Global Video Call</title>
-    
+    <title>Connect - Secured Communication</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
     <style>
-        :root { --whatsapp-green: #075e54; --light-green: #25d366; --bg-gray: #ece5dd; --danger: #ff3b30; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-gray); margin: 0; overflow-x: hidden; }
-        #auth-screen, #main-screen { display: none; height: 100vh; flex-direction: column; }
-        .header { background: var(--whatsapp-green); color: white; padding: 12px 15px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
-        .user-profile { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; }
-        .profile-dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; color: black; min-width: 180px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 101; }
-        .profile-dropdown button { width: 100%; text-align: left; padding: 12px 15px; border: none; background: none; cursor: pointer; border-bottom: 1px solid #eee; }
-        .contact-item { background: white; padding: 15px; border-bottom: 1px solid #ddd; display: flex; align-items: center; cursor: pointer; }
-        .avatar { width: 45px; height: 45px; background: #075e54; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-left: auto; }
-        .online { background: var(--light-green); }
-        .offline { background: #bbb; }
-        #call-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 200; flex-direction: column; }
-        .video-container { flex: 1; position: relative; }
+        :root { --primary: #075e54; --accent: #25d366; --bg: #ece5dd; --error: #ff3b30; --white: #ffffff; }
+        body { font-family: 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Screens */
+        #auth-screen, #main-screen, #admin-screen { display: none; height: 100%; flex-direction: column; }
+        
+        /* Header */
+        .header { background: var(--primary); color: var(--white); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .user-profile { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; transition: 0.3s; }
+        .user-profile:hover { background: rgba(255,255,255,0.1); }
+        .dropdown { display: none; position: absolute; top: 45px; right: 0; background: var(--white); color: #333; min-width: 200px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; overflow: hidden; }
+        .dropdown button { width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+        .dropdown button:hover { background: #f9f9f9; }
+
+        /* Cards */
+        .card { background: var(--white); padding: 32px; border-radius: 16px; margin: auto; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 16px; transition: 0.3s; }
+        input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.2); }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; margin-top: 8px; }
+        .btn-success { background: var(--accent); color: var(--white); }
+        .btn-success:hover { background: #1ebe57; }
+        .link-btn { color: var(--primary); font-size: 14px; cursor: pointer; text-decoration: underline; margin-top: 16px; display: inline-block; }
+
+        /* Contact List */
+        .contact-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .contact-item { background: var(--white); padding: 16px; border-radius: 12px; margin-bottom: 8px; display: flex; align-items: center; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .contact-item:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .avatar { width: 50px; height: 50px; background: var(--primary); border-radius: 50%; color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; margin-right: 15px; }
+
+        /* Video Call */
+        #call-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; flex-direction: column; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { width: 100px; height: 140px; position: absolute; top: 20px; right: 20px; border-radius: 10px; border: 2px solid white; object-fit: cover; }
-        .call-controls { height: 100px; display: flex; justify-content: center; align-items: center; gap: 30px; background: rgba(0,0,0,0.5); }
-        .btn-round { width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer; color: white; font-size: 20px; }
-        .auth-card { background: white; padding: 30px; border-radius: 15px; margin: auto; width: 85%; max-width: 380px; text-align: center; }
-        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
-        .btn-primary { background: var(--light-green); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        #local-video { width: 110px; height: 160px; position: absolute; top: 20px; right: 20px; border-radius: 12px; border: 2px solid #fff; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .call-ui { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; gap: 40px; }
+        .end-btn { background: var(--error); width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+        /* Admin UI */
+        .admin-card { background: #fff; padding: 20px; margin: 10px; border-radius: 12px; border-left: 5px solid var(--primary); }
     </style>
 </head>
 <body>
-
     <audio id="ringtone" loop src="https://www.soundjay.com/phone/phone-calling-1.mp3"></audio>
 
-    <div id="auth-screen">
-        <div class="auth-card">
-            <h2 style="color: var(--whatsapp-green)">Connect</h2>
-            
-            <div id="step-phone">
-                <select id="country-code" style="width: 100%;">
-                    <option value="+966">🇸🇦 Saudi Arabia (+966)</option>
-                    <option value="+91">🇮🇳 India (+91)</option>
-                    <option value="+971">🇦🇪 UAE (+971)</option>
-                    <option value="+968">🇴🇲 Oman (+968)</option>
-                    <option value="+974">🇶🇦 Qatar (+974)</option>
-                    <option value="+973">🇧🇭 Bahrain (+973)</option>
-                    <option value="+44">🇬🇧 UK (+44)</option>
-                    <option value="+1">🇺🇸 USA (+1)</option>
-                    <option value="+965">🇰🇼 Kuwait (+965)</option>
-                </select>
-                <input type="tel" id="phone-input" placeholder="Mobile Number" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
-                <div id="recaptcha-container"></div>
-                <button class="btn-primary" onclick="sendOTP()">Send OTP</button>
-            </div>
-
-            <div id="step-otp" style="display:none;">
-                <input type="text" id="otp-input" placeholder="Enter OTP" inputmode="numeric">
-                <button class="btn-primary" onclick="verifyOTP()">Verify OTP</button>
-            </div>
-
-            <div id="step-name" style="display:none;">
-                <input type="text" id="username-input" placeholder="Choose Unique Username">
-                <button class="btn-primary" onclick="registerUser()">Start Now</button>
-            </div>
+    <div id="auth-screen" style="display: flex;">
+        <div class="card" id="login-box">
+            <h2 style="color: var(--primary)">Welcome Back</h2>
+            <input type="tel" id="login-id" placeholder="Mobile ID" inputmode="numeric">
+            <input type="password" id="login-pass" placeholder="Password">
+            <button class="btn btn-success" onclick="handleLogin()">Login</button>
+            <span class="link-btn" onclick="toggleAuth(false)">New here? Create Account</span>
+        </div>
+        <div class="card" id="reg-box" style="display: none;">
+            <h2 style="color: var(--primary)">Register</h2>
+            <input type="text" id="reg-name" placeholder="Full Name">
+            <input type="tel" id="reg-id" placeholder="Mobile Number" inputmode="numeric">
+            <input type="email" id="reg-mail" placeholder="Email Address">
+            <input type="password" id="reg-pass" placeholder="Create Password">
+            <button class="btn btn-success" onclick="requestAccess()">Submit for Approval</button>
+            <span class="link-btn" onclick="toggleAuth(true)">Already have account? Login</span>
         </div>
     </div>
 
     <div id="main-screen">
         <div class="header">
-            <div class="logo">Connect</div>
+            <div style="font-size: 20px; font-weight: bold;">Connect</div>
             <div class="user-profile" onclick="toggleDropdown()">
                 <span id="display-name">User</span>
-                <div class="profile-dropdown" id="profile-menu">
-                    <div id="display-id" style="padding:10px; font-size:12px; color:#666;">ID: ---</div>
-                    <button onclick="editProfile()">Edit Name</button>
-                    <button onclick="logout()" style="color:var(--danger)">Logout</button>
+                <div class="dropdown" id="profile-menu">
+                    <div style="padding: 12px; background: #f9f9f9; font-size: 12px; color: #666;" id="display-id">ID: ---</div>
+                    <button onclick="editProfile('name')">Update Name</button>
+                    <button onclick="editProfile('pass')">Change Password</button>
+                    <button onclick="logout()" style="color: var(--error);">Sign Out</button>
                 </div>
             </div>
         </div>
-        <div style="padding: 15px; background: white; border-bottom: 1px solid #ddd;">
-            <div style="display:flex; gap:10px;">
-                <input type="tel" id="dial-number" placeholder="Enter ID to Call..." style="flex:1; margin:0;" inputmode="numeric">
-                <button onclick="dialCall()" style="background:var(--light-green); border:none; padding:10px 20px; border-radius:8px; color:white; font-weight:bold;">Call</button>
-            </div>
+        <div style="padding: 15px; background: #fff; border-bottom: 1px solid #ddd; display: flex; gap: 10px;">
+            <input type="tel" id="dial-num" placeholder="Enter ID to Dial..." style="margin:0; flex:1;" inputmode="numeric">
+            <button onclick="dialCall()" style="background: var(--accent); border:none; padding: 0 20px; border-radius: 10px; color: #fff; font-weight: bold;">Call</button>
         </div>
-        <div style="padding: 10px; font-size: 14px; font-weight: bold;">Contacts</div>
-        <div id="contact-list"></div>
+        <div class="contact-list" id="contact-list"></div>
+    </div>
+
+    <div id="admin-screen">
+        <div class="header"><div>Admin Panel</div><button onclick="location.reload()" style="background:none; border:none; color:#fff; cursor:pointer;">Exit</button></div>
+        <div id="pending-list" style="padding: 10px;"></div>
     </div>
 
     <div id="call-overlay">
-        <div class="video-container">
-            <video id="remote-video" autoplay playsinline></video>
-            <video id="local-video" autoplay muted playsinline></video>
-        </div>
-        <div class="call-controls" id="call-ui-controls"></div>
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay muted playsinline></video>
+        <div class="call-ui"><div class="end-btn" onclick="endCall()"><img src="https://img.icons8.com/ios-filled/30/ffffff/end-call.png"/></div></div>
     </div>
 
     <script>
+        // FIREBASE INITIALIZATION
         const firebaseConfig = {
             apiKey: "AIzaSyAIowb628afMgDxbAqyoHVpXRfSC_mTL2g",
-            authDomain: "fefei-8f083.firebaseapp.com",
             databaseURL: "https://fefei-8f083-default-rtdb.firebaseio.com",
-            projectId: "fefei-8f083",
-            storageBucket: "fefei-8f083.firebasestorage.app",
-            messagingSenderId: "465007199884",
-            appId: "1:465007199884:web:3855e934ea6ec0fddf9da9"
+            projectId: "fefei-8f083"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const auth = firebase.auth();
 
-        let peer, localStream, currentCall, myPhone, confirmationResult;
+        // EMAILJS CONFIG
+        const SERVICE_ID = "service_8exfr9s";
+        const TEMPLATE_ID = "template_8yx5s1k";
+        const PUBLIC_KEY = "YOUR_PUBLIC_KEY"; // നിങ്ങളുടെ Public Key ഇവിടെ നൽകുക
+        emailjs.init(PUBLIC_KEY);
 
-        window.onload = () => {
-            const saved = localStorage.getItem('user_data');
-            if (saved) {
-                const data = JSON.parse(saved);
-                myPhone = data.phone;
-                initApp(data.name, data.phone);
-            } else {
-                document.getElementById('auth-screen').style.display = 'flex';
-                window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
-            }
-        };
+        let peer, localStream, currentCall, myId;
 
-        function sendOTP() {
-            let phone = document.getElementById('country-code').value + document.getElementById('phone-input').value;
-            auth.signInWithPhoneNumber(phone, window.recaptchaVerifier).then(result => {
-                confirmationResult = result;
-                document.getElementById('step-phone').style.display = 'none';
-                document.getElementById('step-otp').style.display = 'block';
-            }).catch(err => {
-                alert("Error: " + err.message);
-                location.reload();
+        // AUTH LOGIC
+        function toggleAuth(isLogin) {
+            document.getElementById('login-box').style.display = isLogin ? 'block' : 'none';
+            document.getElementById('reg-box').style.display = isLogin ? 'none' : 'block';
+        }
+
+        function requestAccess() {
+            const name = document.getElementById('reg-name').value.trim();
+            const id = document.getElementById('reg-id').value.trim();
+            const mail = document.getElementById('reg-mail').value.trim();
+            const pass = document.getElementById('reg-pass').value.trim();
+
+            if(!name || !id || !mail || !pass) return alert("Please fill all fields");
+
+            db.ref('users/' + id).once('value', snap => {
+                if (snap.exists()) return alert("This ID is already registered");
+
+                emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+                    from_name: name,
+                    user_id: id,
+                    user_email: mail,
+                    admin_link: window.location.href + "?admin=true"
+                }).then(() => {
+                    db.ref('pending_users/' + id).set({ name, id, mail, pass, requestTime: Date.now() });
+                    alert("Registration request sent to admin. Please wait for approval.");
+                    location.reload();
+                });
             });
         }
 
-        function verifyOTP() {
-            const code = document.getElementById('otp-input').value;
-            confirmationResult.confirm(code).then(result => {
-                myPhone = result.user.phoneNumber;
-                checkUser(myPhone);
-            }).catch(() => alert("Invalid OTP"));
-        }
+        function handleLogin() {
+            const id = document.getElementById('login-id').value;
+            const pass = document.getElementById('login-pass').value;
 
-        function checkUser(phone) {
-            db.ref('users/' + phone).once('value', snap => {
-                if (snap.exists()) {
+            db.ref('users/' + id).once('value', snap => {
+                if (snap.exists() && snap.val().pass === pass) {
                     const user = snap.val();
-                    localStorage.setItem('user_data', JSON.stringify({name: user.name, phone: phone}));
-                    initApp(user.name, phone);
+                    localStorage.setItem('user_session', JSON.stringify(user));
+                    startApp(user);
                 } else {
-                    document.getElementById('step-otp').style.display = 'none';
-                    document.getElementById('step-name').style.display = 'block';
+                    alert("Invalid credentials or account not yet approved.");
                 }
             });
         }
 
-        function registerUser() {
-            const name = document.getElementById('username-input').value.trim();
-            if (!name) return alert("Enter Username");
-            db.ref('usernames').child(name.toLowerCase()).once('value', snap => {
-                if (snap.exists()) return alert("Username already taken!");
-                db.ref('users/' + myPhone).set({ name: name, status: 'online' });
-                db.ref('usernames').child(name.toLowerCase()).set(myPhone);
-                localStorage.setItem('user_data', JSON.stringify({name: name, phone: myPhone}));
-                initApp(name, myPhone);
-            });
-        }
-
-        function initApp(name, phone) {
+        // APP LOGIC
+        function startApp(user) {
+            myId = user.id;
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('main-screen').style.display = 'flex';
-            document.getElementById('display-name').innerText = name;
-            document.getElementById('display-id').innerText = "ID: " + phone;
-            peer = new Peer(phone);
+            document.getElementById('display-name').innerText = user.name;
+            document.getElementById('display-id').innerText = "ID: " + user.id;
+
+            peer = new Peer(myId);
             peer.on('open', () => {
-                db.ref('users/' + phone).update({ status: 'online' });
-                loadContacts();
+                db.ref('users/' + myId).update({ online: true });
+                syncContacts();
             });
-            peer.on('call', call => { currentCall = call; showCallUI('incoming', call.peer); });
+            peer.on('call', call => {
+                currentCall = call;
+                document.getElementById('ringtone').play();
+                if(confirm(`Incoming call from ${call.peer}. Answer?`)) acceptCall();
+                else endCall();
+            });
         }
 
-        function loadContacts() {
+        function syncContacts() {
             db.ref('users').on('value', snap => {
                 const list = document.getElementById('contact-list');
                 list.innerHTML = '';
                 snap.forEach(child => {
-                    if (child.key !== myPhone) {
-                        const user = child.val();
+                    if (child.key !== myId) {
+                        const u = child.val();
                         const div = document.createElement('div');
                         div.className = 'contact-item';
-                        div.onclick = () => startCall(child.key);
-                        div.innerHTML = `
-                            <div class="avatar">${user.name.charAt(0)}</div>
-                            <div style="flex:1">
-                                <div style="font-weight:bold">${user.name} (${child.key})</div>
-                            </div>
-                            <div class="status-dot ${user.status === 'online' ? 'online' : 'offline'}"></div>
-                        `;
+                        div.onclick = () => initiateCall(u.id);
+                        div.innerHTML = `<div class="avatar">${u.name.charAt(0)}</div><div><b>${u.name}</b><br><small>${u.id}</small></div>`;
                         list.appendChild(div);
                     }
                 });
             });
         }
 
-        function editProfile() {
-            const oldName = document.getElementById('display-name').innerText;
-            const newName = prompt("New Name:");
-            if (newName && newName !== oldName) {
-                db.ref('usernames').child(newName.toLowerCase()).once('value', snap => {
-                    if (snap.exists()) return alert("Username unavailable");
-                    db.ref('usernames').child(oldName.toLowerCase()).remove();
-                    db.ref('usernames').child(newName.toLowerCase()).set(myPhone);
-                    db.ref('users/' + myPhone).update({ name: newName });
-                    localStorage.setItem('user_data', JSON.stringify({name: newName, phone: myPhone}));
-                    location.reload();
+        // ADMIN PANEL LOGIC
+        function checkAdminAccess() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('admin') === 'true') {
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('admin-screen').style.display = 'flex';
+                loadPendingUsers();
+            }
+        }
+
+        function loadPendingUsers() {
+            db.ref('pending_users').on('value', snap => {
+                const list = document.getElementById('pending-list');
+                list.innerHTML = snap.exists() ? '' : 'No pending requests.';
+                snap.forEach(child => {
+                    const u = child.val();
+                    const div = document.createElement('div');
+                    div.className = 'admin-card';
+                    div.innerHTML = `
+                        <b>${u.name}</b> (${u.id})<br>${u.mail}
+                        <div style="margin-top:10px;">
+                            <button onclick="approveUser('${u.id}')" style="background:var(--accent); color:#fff; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">Approve</button>
+                            <button onclick="rejectUser('${u.id}')" style="background:var(--error); color:#fff; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; margin-left:10px;">Reject</button>
+                        </div>
+                    `;
+                    list.appendChild(div);
                 });
+            });
+        }
+
+        function approveUser(userId) {
+            db.ref('pending_users/' + userId).once('value', snap => {
+                const data = snap.val();
+                db.ref('users/' + userId).set(data).then(() => {
+                    db.ref('pending_users/' + userId).remove();
+                    // ഉപയോക്താവിന് അഭിനന്ദന മെയിൽ അയക്കാം (Optional)
+                    alert("User approved successfully!");
+                });
+            });
+        }
+
+        function rejectUser(userId) {
+            if(confirm("Reject this user?")) {
+                db.ref('pending_users/' + userId).remove();
             }
         }
 
-        function logout() {
-            db.ref('users/' + myPhone).update({ status: 'offline' });
-            localStorage.clear();
-            location.reload();
+        // CALL SYSTEM
+        async function initiateCall(target) {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+                document.getElementById('local-video').srcObject = localStream;
+                document.getElementById('call-overlay').style.display = 'flex';
+                currentCall = peer.call(target, localStream);
+                currentCall.on('stream', s => document.getElementById('remote-video').srcObject = s);
+            } catch(e) { alert("Camera/Mic access denied"); }
         }
 
-        async function startCall(target) {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('local-video').srcObject = localStream;
-            showCallUI('outgoing', target);
-            const call = peer.call(target, localStream);
-            setupCallEvents(call);
-        }
-
-        function showCallUI(type, id) {
-            document.getElementById('call-overlay').style.display = 'flex';
-            const controls = document.getElementById('call-ui-controls');
-            if (type === 'incoming') {
-                document.getElementById('ringtone').play();
-                controls.innerHTML = `<button class="btn-round" style="background:green" onclick="answerCall()">Accept</button>
-                                      <button class="btn-round" style="background:red" onclick="endCall()">Reject</button>`;
-            } else {
-                controls.innerHTML = `<button class="btn-round" style="background:red" onclick="endCall()">End</button>`;
-            }
-        }
-
-        async function answerCall() {
+        async function acceptCall() {
             document.getElementById('ringtone').pause();
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
             document.getElementById('local-video').srcObject = localStream;
+            document.getElementById('call-overlay').style.display = 'flex';
             currentCall.answer(localStream);
-            setupCallEvents(currentCall);
-        }
-
-        function setupCallEvents(call) {
-            currentCall = call;
-            call.on('stream', s => document.getElementById('remote-video').srcObject = s);
-            call.on('close', endCall);
+            currentCall.on('stream', s => document.getElementById('remote-video').srcObject = s);
         }
 
         function endCall() {
             document.getElementById('ringtone').pause();
-            if (currentCall) currentCall.close();
-            if (localStream) localStream.getTracks().forEach(t => t.stop());
+            if(currentCall) currentCall.close();
+            if(localStream) localStream.getTracks().forEach(t => t.stop());
             document.getElementById('call-overlay').style.display = 'none';
         }
 
+        // UTILS
         function toggleDropdown() {
             const m = document.getElementById('profile-menu');
             m.style.display = m.style.display === 'block' ? 'none' : 'block';
         }
 
-        function dialCall() {
-            const n = document.getElementById('dial-number').value;
-            if (n) startCall(n);
+        function logout() {
+            if(myId) db.ref('users/' + myId).update({ online: false });
+            localStorage.clear();
+            location.reload();
         }
+
+        function editProfile(type) {
+            const val = prompt(`Enter new ${type}:`);
+            if(val) db.ref('users/' + myId).update({ [type==='name'?'name':'pass']: val });
+        }
+
+        window.onload = () => {
+            checkAdminAccess();
+            const saved = localStorage.getItem('user_session');
+            if (saved) startApp(JSON.parse(saved));
+        };
     </script>
 </body>
 </html>
