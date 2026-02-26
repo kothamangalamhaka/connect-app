@@ -14,15 +14,15 @@
         #auth-screen, #main-screen { display: none; height: 100%; flex-direction: column; }
         .header { background: var(--primary); color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .user-profile { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; }
-        .dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; color: #333; min-width: 200px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; overflow: hidden; }
-        .dropdown button { width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; color: #333; min-width: 150px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; overflow: hidden; }
+        .dropdown button { width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; font-weight: bold; }
         .card { background: white; padding: 32px; border-radius: 16px; margin: auto; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; position: relative; }
         input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
         .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; background: var(--accent); color: white; }
         .contact-item { background: white; padding: 12px 16px; border-radius: 12px; margin: 10px; display: flex; align-items: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .avatar { width: 45px; height: 45px; background: var(--primary); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; }
         .call-btns { margin-left: auto; display: flex; gap: 10px; }
-        .call-btn { padding: 8px; border-radius: 50%; border: none; cursor: pointer; background: #f0f0f0; }
+        .call-btn { padding: 8px; border-radius: 50%; border: none; cursor: pointer; background: #f0f0f0; font-size: 18px; }
         
         #loader-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); border-radius: 16px; z-index: 10; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
@@ -67,8 +67,6 @@
             <div class="user-profile" onclick="toggleDropdown()">
                 <span id="display-name">User</span>
                 <div class="dropdown" id="profile-menu">
-                    <button onclick="edit('name')">Update Name</button>
-                    <button onclick="edit('pass')">Change Password</button>
                     <button onclick="logout()" style="color: var(--error);">Sign Out</button>
                 </div>
             </div>
@@ -92,7 +90,7 @@
         const db = firebase.database();
         emailjs.init("9ynLrm-41NbPpvJPG");
 
-        let peer, localStream, currentCall, myId;
+        let peer, localStream, currentCall, myId, incomingIsVideo = false, connCheckInterval;
 
         const videoConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: true };
         const audioConstraints = { video: false, audio: true };
@@ -162,9 +160,15 @@
             });
             peer.on('call', call => { 
                 currentCall = call; 
+                incomingIsVideo = (call.options && call.options.constraints) ? !!call.options.constraints.video : true;
                 document.getElementById('ringtone').play(); 
-                if(confirm("ഇൻകമിംഗ് കോൾ... സ്വീകരിക്കണോ?")) answerCall(); 
-                else endCall(); 
+                let typeMsg = incomingIsVideo ? "വീഡിയോ കോൾ" : "ഓഡിയോ കോൾ";
+                if(confirm(typeMsg + " വരുന്നു... സ്വീകരിക്കണോ?")) answerCall(); 
+                else {
+                    // റിജക്ട് ചെയ്യുമ്പോൾ മറ്റേ വശത്തും കട്ട് ആകാൻ സിഗ്നൽ നൽകുന്നു
+                    call.answer(); 
+                    setTimeout(() => endCall(), 500);
+                }
             });
         }
 
@@ -176,14 +180,15 @@
                 document.getElementById('call-overlay').style.display = 'flex';
                 currentCall = peer.call(target, localStream);
                 handleCallEvents(currentCall);
-            } catch (err) { alert("ക്യാമറ/മൈക്ക് അനുമതി ആവശ്യമാണ്."); }
+            } catch (err) { alert("അനുമതി ആവശ്യമാണ്."); }
         }
 
         async function answerCall() {
             document.getElementById('ringtone').pause();
             try {
-                localStream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+                localStream = await navigator.mediaDevices.getUserMedia(incomingIsVideo ? videoConstraints : audioConstraints);
                 document.getElementById('local-video').srcObject = localStream;
+                document.getElementById('local-video').style.display = incomingIsVideo ? 'block' : 'none';
                 document.getElementById('call-overlay').style.display = 'flex';
                 currentCall.answer(localStream);
                 handleCallEvents(currentCall);
@@ -191,22 +196,37 @@
         }
 
         function handleCallEvents(call) {
-            call.on('stream', s => document.getElementById('remote-video').srcObject = s);
+            call.on('stream', s => {
+                const remoteVideo = document.getElementById('remote-video');
+                remoteVideo.srcObject = s;
+                remoteVideo.style.display = (s.getVideoTracks().length > 0) ? 'block' : 'none';
+            });
+
+            // കോൾ ക്ലോസ് ചെയ്യുമ്പോൾ
             call.on('close', () => endCall());
-            call.on('error', () => endCall());
-            // കണക്ഷൻ ലോസ്റ്റ് ആയാൽ കോൾ കട്ട് ചെയ്യാൻ
-            const checkConn = setInterval(() => {
-                if(!call.peerConnection || call.peerConnection.iceConnectionState === 'disconnected' || call.peerConnection.iceConnectionState === 'closed') {
+            
+            // എതിർകക്ഷി ഡിസ്കണക്ട് ആയാൽ ഉടൻ കട്ട് ആകാൻ നിരീക്ഷിക്കുന്നു
+            if (connCheckInterval) clearInterval(connCheckInterval);
+            connCheckInterval = setInterval(() => {
+                if (call.peerConnection && (call.peerConnection.iceConnectionState === 'disconnected' || 
+                    call.peerConnection.iceConnectionState === 'closed' || 
+                    call.peerConnection.signalingState === 'closed')) {
                     endCall();
-                    clearInterval(checkConn);
                 }
-            }, 2000);
+            }, 1500);
         }
 
         function endCall() { 
             document.getElementById('ringtone').pause(); 
-            if(currentCall) { currentCall.close(); } 
-            if(localStream) { localStream.getTracks().forEach(t => t.stop()); } 
+            if (connCheckInterval) clearInterval(connCheckInterval);
+            if(currentCall) {
+                currentCall.close();
+                currentCall = null;
+            } 
+            if(localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                localStream = null;
+            } 
             document.getElementById('call-overlay').style.display = 'none'; 
             document.getElementById('remote-video').srcObject = null;
         }
